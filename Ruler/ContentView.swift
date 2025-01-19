@@ -85,9 +85,14 @@ struct ContentView: View {
                         .bold()
                         .foregroundColor(.blue)
                         .padding(.bottom, 0)
+                        .padding(.horizontal, 12) // 将水平内边距从16改为12
+                        .padding(.vertical, 12) // 添加垂直内边距
+                    
+                    // 添加额外的间距
+                    Spacer().frame(height: 12) // 将间距从4改为12，整体向下偏移
                     
                     // 详细信息
-                    VStack(spacing: 1) {
+                    VStack(spacing: 4) {
                         HStack(spacing: 20) {
                             InfoItem(title: "起点", value: String(format: "%.1f cm", leftCursor))
                             InfoItem(title: "终点", value: String(format: "%.1f cm", rightCursor))
@@ -98,14 +103,16 @@ struct ContentView: View {
                             InfoItem(title: "量程", value: "\(Int(rulerLength)) cm")
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 0)
+                    .padding(.horizontal, 12) // 将水平内边距从16改为12
+                    .padding(.vertical, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.blue.opacity(0.1))
+                        RoundedRectangle(cornerRadius: 15) // 增加圆角
+                            .fill(Color.white) // 使用白色背景
+                            .shadow(color: .gray.opacity(0.4), radius: 6, x: 0, y: 4) // 增加阴影效果
                     )
                 }
                 .padding(.top, 0)
+                .padding(.leading, 8) // 添加左侧偏移
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -124,7 +131,7 @@ struct RulerView: View {
         Canvas { context, size in
             // 绘制尺子背景
             let background = Path { path in
-                path.addRect(CGRect(x: -10, y: 0, width: size.width + 20, height: 100))
+                path.addRoundedRect(in: CGRect(x: -10, y: 0, width: size.width + 20, height: 100), cornerSize: CGSize(width: 20, height: 20))
             }
             context.fill(background, with: .linearGradient(
                 Gradient(colors: [Color(white: 0.95), Color(white: 0.98)]),
@@ -135,7 +142,7 @@ struct RulerView: View {
             // 添加边框阴影效果
             context.stroke(
                 Path { path in
-                    path.addRect(CGRect(x: -10, y: 0, width: size.width + 20, height: 100))
+                    path.addRoundedRect(in: CGRect(x: -10, y: 0, width: size.width + 20, height: 100), cornerSize: CGSize(width: 20, height: 20))
                 },
                 with: .color(.gray.opacity(0.3)),
                 lineWidth: 1
@@ -252,32 +259,33 @@ struct RulerCursor: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Rectangle()
+            // 使用圆角矩形作为游标主体
+            RoundedRectangle(cornerRadius: 8) // 圆角矩形
                 .fill(
                     LinearGradient(
-                        colors: [.blue.opacity(0.8), .blue.opacity(0.6)],
+                        gradient: Gradient(colors: [.blue.opacity(0.8), .blue.opacity(0.6)]),
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
-                .frame(width: 4, height: 200)
-                .overlay(
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .blue.opacity(0.8)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 12, height: 12)
-                        .shadow(color: .black.opacity(0.2), radius: 1, x: 0, y: 1)
-                        .offset(y: 100)
+                .frame(width: 8, height: 250) // 增加宽度
+                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2) // 添加阴影效果
+            
+            // 圆形指示器
+            Circle()
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.blue, .blue.opacity(0.8)]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 )
-                .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
+                .frame(width: 16, height: 16) // 增加圆形的大小
+                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2) // 添加阴影效果
+                .offset(y: -8) // 将圆圈的偏移量调整为负值，使其位于游标顶部
             
             Text(String(format: "%.1f", position))
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 14, weight: .medium)) // 增加字体大小
                 .foregroundColor(.blue)
                 .padding(.top, 4)
         }
