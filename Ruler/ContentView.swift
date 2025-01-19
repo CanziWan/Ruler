@@ -13,15 +13,24 @@ struct ContentView: View {
     
     // 计算每厘米对应的点数
     private var pointsPerCm: CGFloat {
+        // 使用UIScreen的scale来获取实际的物理像素密度
+        let scale = UIScreen.main.scale
         // 1英寸 = 2.54厘米
-        // 1英寸 = 96点
-        return 96.0 / 2.54  // 约等于 37.795275591 点/厘米
+        // 1英寸 = 72点 (标准PT单位)
+        return 72.0 * scale / 2.54  // 根据设备实际像素密度计算
     }
     
     // 根据设备计算最大可显示长度
     private var rulerLength: CGFloat {
-        let screenWidth = UIScreen.main.bounds.height // 横屏时使用高度值
-        return floor(screenWidth / pointsPerCm) // 转换为厘米并向下取整
+        // 获取设备屏幕的实际尺寸
+        let screenWidth = UIScreen.main.bounds.width  // 使用宽度而不是高度
+        let screenHeight = UIScreen.main.bounds.height
+        // 使用较长的一边作为尺子的长度
+        let maxLength = max(screenWidth, screenHeight)
+        // 考虑边距，留出一些空间
+        let availableLength = maxLength - 40 // 减去左右各20点的边距
+        // 转换为厘米并向下取整
+        return floor(availableLength / pointsPerCm)
     }
     
     private let majorTickInterval: CGFloat = 1.0
@@ -35,7 +44,7 @@ struct ContentView: View {
         GeometryReader { geometry in
             let cmToPoints = pointsPerCm
             
-            VStack(spacing: 20) {
+            VStack(spacing: -120) {
                 // 尺子刻度
                 ZStack(alignment: .top) {
                     RulerView(rulerLength: rulerLength,
@@ -66,12 +75,37 @@ struct ContentView: View {
                                 }
                             })
                 }
-                .frame(width: rulerLength * cmToPoints, height: 200)
+                .frame(width: rulerLength * cmToPoints, height: 300)
                 
-                // 显示距离
-                Text(String(format: "%.1f cm", distance))
-                    .font(.title)
-                    .bold()
+                // 修改信息显示部分
+                VStack(spacing: 0) {
+                    // 主测量距离
+                    Text(String(format: "测量距离: %.1f 厘米", distance))
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.blue)
+                        .padding(.bottom, 0)
+                    
+                    // 详细信息
+                    VStack(spacing: 1) {
+                        HStack(spacing: 20) {
+                            InfoItem(title: "起点", value: String(format: "%.1f cm", leftCursor))
+                            InfoItem(title: "终点", value: String(format: "%.1f cm", rightCursor))
+                        }
+                        
+                        HStack(spacing: 20) {
+                            InfoItem(title: "精确度", value: "0.1 cm")
+                            InfoItem(title: "量程", value: "\(Int(rulerLength)) cm")
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 0)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.blue.opacity(0.1))
+                    )
+                }
+                .padding(.top, 0)
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -90,18 +124,18 @@ struct RulerView: View {
         Canvas { context, size in
             // 绘制尺子背景
             let background = Path { path in
-                path.addRect(CGRect(x: -10, y: 0, width: size.width + 20, height: 60))
+                path.addRect(CGRect(x: -10, y: 0, width: size.width + 20, height: 100))
             }
             context.fill(background, with: .linearGradient(
                 Gradient(colors: [Color(white: 0.95), Color(white: 0.98)]),
                 startPoint: CGPoint(x: 0, y: 0),
-                endPoint: CGPoint(x: 0, y: 60)
+                endPoint: CGPoint(x: 0, y: 100)
             ))
             
             // 添加边框阴影效果
             context.stroke(
                 Path { path in
-                    path.addRect(CGRect(x: -10, y: 0, width: size.width + 20, height: 60))
+                    path.addRect(CGRect(x: -10, y: 0, width: size.width + 20, height: 100))
                 },
                 with: .color(.gray.opacity(0.3)),
                 lineWidth: 1
@@ -123,13 +157,13 @@ struct RulerView: View {
                 // 绘制大刻度
                 let majorTick = Path { path in
                     path.move(to: CGPoint(x: x, y: 0))
-                    path.addLine(to: CGPoint(x: x, y: 35))
+                    path.addLine(to: CGPoint(x: x, y: 50))
                 }
                 context.stroke(majorTick,
                     with: .linearGradient(
                         Gradient(colors: [.blue.opacity(0.8), .blue.opacity(0.4)]),
                         startPoint: CGPoint(x: x, y: 0),
-                        endPoint: CGPoint(x: x, y: 35)
+                        endPoint: CGPoint(x: x, y: 50)
                     ),
                     lineWidth: 1.5
                 )
@@ -138,7 +172,7 @@ struct RulerView: View {
                 let text = Text("\(cm)")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.blue.opacity(0.8))
-                context.draw(text, at: CGPoint(x: x - 5, y: 45))
+                context.draw(text, at: CGPoint(x: x - 5, y: 60))
                 
                 // 绘制小刻度
                 if cm < Int(rulerLength) {
@@ -146,8 +180,10 @@ struct RulerView: View {
                         let minorX = x + (CGFloat(minor) * cmToPoints / CGFloat(minorTickCount))
                         let tickHeight: CGFloat
                         
-                        if minor == 5 {
-                            tickHeight = 25
+                        // 修改刻度高度逻辑
+                        switch minor {
+                        case 5: // 5毫米刻度
+                            tickHeight = 40
                             let mediumTick = Path { path in
                                 path.move(to: CGPoint(x: minorX, y: 0))
                                 path.addLine(to: CGPoint(x: minorX, y: tickHeight))
@@ -160,8 +196,22 @@ struct RulerView: View {
                                 ),
                                 lineWidth: 1.0
                             )
-                        } else {
-                            tickHeight = 15
+                        case 2, 4, 6, 8: // 偶数毫米刻度
+                            tickHeight = 30
+                            let minorTick = Path { path in
+                                path.move(to: CGPoint(x: minorX, y: 0))
+                                path.addLine(to: CGPoint(x: minorX, y: tickHeight))
+                            }
+                            context.stroke(minorTick,
+                                with: .linearGradient(
+                                    Gradient(colors: [.blue.opacity(0.4), .blue.opacity(0.2)]),
+                                    startPoint: CGPoint(x: minorX, y: 0),
+                                    endPoint: CGPoint(x: minorX, y: tickHeight)
+                                ),
+                                lineWidth: 0.8
+                            )
+                        default: // 奇数毫米刻度
+                            tickHeight = 25
                             let minorTick = Path { path in
                                 path.move(to: CGPoint(x: minorX, y: 0))
                                 path.addLine(to: CGPoint(x: minorX, y: tickHeight))
@@ -210,7 +260,7 @@ struct RulerCursor: View {
                         endPoint: .bottom
                     )
                 )
-                .frame(width: 4, height: 140)
+                .frame(width: 4, height: 200)
                 .overlay(
                     Circle()
                         .fill(
@@ -222,7 +272,7 @@ struct RulerCursor: View {
                         )
                         .frame(width: 12, height: 12)
                         .shadow(color: .black.opacity(0.2), radius: 1, x: 0, y: 1)
-                        .offset(y: 70)
+                        .offset(y: 100)
                 )
                 .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
             
@@ -230,6 +280,23 @@ struct RulerCursor: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.blue)
                 .padding(.top, 4)
+        }
+    }
+}
+
+// 添加新的信息展示组件
+struct InfoItem: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+            Text(value)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.blue)
         }
     }
 }
