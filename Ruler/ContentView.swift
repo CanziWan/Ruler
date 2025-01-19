@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var leftCursor: CGFloat = 3.0
-    @State private var rightCursor: CGFloat = 5.0
+    @State private var leftCursor: CGFloat = 0.0
+    @State private var rightCursor: CGFloat = 1.0
     
     // 计算每厘米对应的点数
     private var pointsPerCm: CGFloat {
@@ -81,15 +81,15 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     // 主测量距离
                     Text(String(format: "测量距离: %.1f 厘米", distance))
-                        .font(.title2)
+                        .font(.title)
                         .bold()
                         .foregroundColor(.blue)
                         .padding(.bottom, 0)
-                        .padding(.horizontal, 12) // 将水平内边距从16改为12
-                        .padding(.vertical, 12) // 添加垂直内边距
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 2)
                     
                     // 添加额外的间距
-                    Spacer().frame(height: 12) // 将间距从4改为12，整体向下偏移
+                    Spacer().frame(height: 2)
                     
                     // 详细信息
                     VStack(spacing: 4) {
@@ -103,16 +103,16 @@ struct ContentView: View {
                             InfoItem(title: "量程", value: "\(Int(rulerLength)) cm")
                         }
                     }
-                    .padding(.horizontal, 12) // 将水平内边距从16改为12
+                    .padding(.horizontal, 12)
                     .padding(.vertical, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 15) // 增加圆角
-                            .fill(Color.white) // 使用白色背景
-                            .shadow(color: .gray.opacity(0.4), radius: 6, x: 0, y: 4) // 增加阴影效果
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color.white)
+                            .shadow(color: .gray.opacity(0.4), radius: 6, x: 0, y: 4)
                     )
                 }
                 .padding(.top, 0)
-                .padding(.leading, 8) // 添加左侧偏移
+                .padding(.leading, 8)
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -158,13 +158,17 @@ struct RulerView: View {
                 lineWidth: 0.5
             )
             
-            for cm in 0...Int(rulerLength) {
-                let x = CGFloat(cm) * cmToPoints
+            // 计算刻度数量
+            let totalTicks = Int(rulerLength) // 总刻度数
+            let tickSpacing = size.width / CGFloat(totalTicks) // 每个刻度的间隔
+            
+            for cm in 0...totalTicks {
+                let x = CGFloat(cm) * tickSpacing
                 
                 // 绘制大刻度
                 let majorTick = Path { path in
                     path.move(to: CGPoint(x: x, y: 0))
-                    path.addLine(to: CGPoint(x: x, y: 50))
+                    path.addLine(to: CGPoint(x: x, y: 50)) // 调整刻度高度
                 }
                 context.stroke(majorTick,
                     with: .linearGradient(
@@ -177,20 +181,22 @@ struct RulerView: View {
                 
                 // 添加数字
                 let text = Text("\(cm)")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.blue.opacity(0.8))
-                context.draw(text, at: CGPoint(x: x - 5, y: 60))
+                
+                // 在刻度为0的位置也绘制数字
+                context.draw(text, at: CGPoint(x: x - 5, y: 55)) // 调整数字位置
                 
                 // 绘制小刻度
-                if cm < Int(rulerLength) {
+                if cm < totalTicks {
                     for minor in 1..<minorTickCount {
-                        let minorX = x + (CGFloat(minor) * cmToPoints / CGFloat(minorTickCount))
+                        let minorX = x + (CGFloat(minor) * tickSpacing / CGFloat(minorTickCount))
                         let tickHeight: CGFloat
                         
                         // 修改刻度高度逻辑
                         switch minor {
                         case 5: // 5毫米刻度
-                            tickHeight = 40
+                            tickHeight = 30
                             let mediumTick = Path { path in
                                 path.move(to: CGPoint(x: minorX, y: 0))
                                 path.addLine(to: CGPoint(x: minorX, y: tickHeight))
@@ -204,7 +210,7 @@ struct RulerView: View {
                                 lineWidth: 1.0
                             )
                         case 2, 4, 6, 8: // 偶数毫米刻度
-                            tickHeight = 30
+                            tickHeight = 20
                             let minorTick = Path { path in
                                 path.move(to: CGPoint(x: minorX, y: 0))
                                 path.addLine(to: CGPoint(x: minorX, y: tickHeight))
@@ -218,7 +224,7 @@ struct RulerView: View {
                                 lineWidth: 0.8
                             )
                         default: // 奇数毫米刻度
-                            tickHeight = 25
+                            tickHeight = 15
                             let minorTick = Path { path in
                                 path.move(to: CGPoint(x: minorX, y: 0))
                                 path.addLine(to: CGPoint(x: minorX, y: tickHeight))
@@ -300,10 +306,10 @@ struct InfoItem: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(title)
-                .font(.system(size: 14))
+                .font(.system(size: 16))
                 .foregroundColor(.gray)
             Text(value)
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.blue)
         }
     }
